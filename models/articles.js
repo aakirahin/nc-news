@@ -6,12 +6,6 @@ exports.selectArticleByID = (articleID) => {
       articleID,
     ])
     .then((result) => {
-      if (result.rows.length === 0) {
-        return Promise.reject({
-          status: 404,
-          msg: "Article ID does not exist",
-        });
-      }
       return result.rows[0];
     });
 };
@@ -45,42 +39,26 @@ exports.selectArticles = (sort_by, order, topic) => {
     ["article_id", "title", "votes", "topic", "author"].includes(sort_by)
   ) {
     sortBy = `ORDER BY articles.${sort_by} `;
-  } else if (
-    !["article_id", "title", "votes", "topic", "author"].includes(sort_by)
-  ) {
-    return Promise.reject({
-      status: 400,
-      msg: `Sort_by query must be one of the following: article_id, title, votes, topic, author`,
-    });
   }
 
   if (!order) {
     orderBy = `ASC;`;
   } else if (order.toUpperCase() === "ASC" || order.toUpperCase() === "DESC") {
     orderBy = `${order.toUpperCase()};`;
-  } else if (order.toUpperCase() !== "ASC" || order.toUpperCase() !== "DESC") {
-    return Promise.reject({
-      status: 400,
-      msg: `Order must be "asc" (ascending) or "desc" (descending).`,
-    });
   }
 
   if (topic) {
-    db.query(`SELECT EXISTS(SELECT 1 FROM topics WHERE topics.slug = $1)`, [
-      topic,
-    ]).then((topic) => {
-      if (topic.rows[0].exists === false) {
-        return Promise.reject({
-          status: 400,
-          msg: "This topic does not exist",
-        });
-      }
-      byTopic = `WHERE articles.topic = '${topic}' `;
-      query = query + byTopic;
-    });
+    byTopic = `WHERE articles.topic = '${topic}' `;
+    query = query + byTopic;
   }
 
   return db.query(query + groupBy + sortBy + orderBy).then((result) => {
+    if (result.rows.length === 0) {
+      return Promise.reject({
+        status: 404,
+        msg: `No related articles under the topic "${topic}"`,
+      });
+    }
     return result.rows;
   });
 };
@@ -91,43 +69,19 @@ exports.selectCommentsOfArticle = (articleID) => {
       articleID,
     ])
     .then((result) => {
-      const comments = result.rows;
-      if (comments.length === 0) {
-        return "No comments yet";
-      }
-      return comments;
+      return result.rows;
     });
 };
 
 exports.addNewComment = (articleID, newComment) => {
-  if (!newComment.username || !newComment.body) {
-    return Promise.reject({
-      status: 400,
-      msg: `Please structure your request body as follows: { username: your_username_here, body: your_comment_here}`,
-    });
-  }
-
   return db
-    .query(`SELECT EXISTS(SELECT 1 FROM users WHERE users.username = $1);`, [
-      newComment.username,
-    ])
-    .then((username) => {
-      if (username.rows[0].exists === false) {
-        return Promise.reject({
-          status: 405,
-          msg: "The username you have given does not exist in this database",
-        });
-      }
-    })
-    .then(() => {
-      return db.query(
-        `INSERT INTO comments
+    .query(
+      `INSERT INTO comments
       (author, article_id, body)
       VALUES
       ($1, $2, $3)`,
-        [newComment.username, articleID, newComment.body]
-      );
-    })
+      [newComment.username, articleID, newComment.body]
+    )
     .then(() => {
       return db
         .query(
@@ -138,8 +92,7 @@ exports.addNewComment = (articleID, newComment) => {
           [newComment.username, articleID, newComment.body]
         )
         .then((result) => {
-          const newComment = result.rows[0];
-          return newComment;
+          return result.rows[0];
         });
     });
 };

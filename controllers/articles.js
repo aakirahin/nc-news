@@ -5,7 +5,16 @@ const {
   selectCommentsOfArticle,
   addNewComment,
 } = require("../models/articles");
-const { checkArticleID, checkRequestBody, checkVotes } = require("./errors");
+const {
+  checkArticleID,
+  checkRequestBody,
+  checkVotes,
+  checkSortByQuery,
+  checkOrderQuery,
+  checkTopicQuery,
+  checkComment,
+  noComments,
+} = require("./errors");
 
 exports.getArticleByID = (req, res, next) => {
   const { articleID } = req.params;
@@ -23,7 +32,6 @@ exports.getArticleByID = (req, res, next) => {
 exports.patchVotes = (req, res, next) => {
   const { articleID } = req.params;
   const votes = req.body;
-  console.log(votes);
   Promise.all([
     checkArticleID(articleID),
     checkRequestBody(votes),
@@ -44,9 +52,19 @@ exports.patchVotes = (req, res, next) => {
 
 exports.getArticles = (req, res, next) => {
   const { sort_by, order, topic } = req.query;
-  selectArticles(sort_by, order, topic)
+  Promise.all([
+    checkSortByQuery(sort_by),
+    checkOrderQuery(order),
+    checkTopicQuery(topic),
+    selectArticles(sort_by, order, topic),
+  ])
     .then((articles) => {
-      res.status(200).send({ articles });
+      res.status(200).send({
+        sortedBy: articles[0],
+        orderedBy: articles[1],
+        filteredByTopic: articles[2],
+        articles: articles[3],
+      });
     })
     .catch((err) => {
       next(err);
@@ -55,9 +73,13 @@ exports.getArticles = (req, res, next) => {
 
 exports.getCommentsOfArticle = (req, res, next) => {
   const { articleID } = req.params;
-  Promise.all([checkArticleID(articleID), selectCommentsOfArticle(articleID)])
+  Promise.all([
+    checkArticleID(articleID),
+    noComments(articleID),
+    selectCommentsOfArticle(articleID),
+  ])
     .then((comments) => {
-      res.status(200).send({ articleID: comments[0], comments: comments[1] });
+      res.status(200).send({ articleID: comments[0], comments: comments[2] });
     })
     .catch((err) => {
       next(err);
@@ -67,11 +89,17 @@ exports.getCommentsOfArticle = (req, res, next) => {
 exports.postNewComment = (req, res, next) => {
   const { articleID } = req.params;
   const newComment = req.body;
-  addNewComment(articleID, newComment)
+  Promise.all([
+    checkArticleID(articleID),
+    checkRequestBody(newComment),
+    checkComment(newComment),
+    addNewComment(articleID, newComment),
+  ])
     .then((postedComment) => {
-      res
-        .status(201)
-        .send({ msg: "Your comment has been posted!", comment: postedComment });
+      res.status(201).send({
+        msg: "Your comment has been posted!",
+        comment: postedComment[3],
+      });
     })
     .catch((err) => {
       next(err);

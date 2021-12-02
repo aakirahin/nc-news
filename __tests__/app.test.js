@@ -40,12 +40,12 @@ describe("GET /api/articles/:article_id", () => {
       });
   });
 
-  test("throws an error if ID is an invalid data type", () => {
+  test("throws an error if article ID is an invalid data type", () => {
     const articleID = "string";
     return request(app).get(`/api/articles/${articleID}`).expect(400);
   });
 
-  test("throws an error if ID does not exist", () => {
+  test("throws an error if article ID does not exist", () => {
     const articleID = 889;
     return request(app).get(`/api/articles/${articleID}`).expect(404);
   });
@@ -67,6 +67,24 @@ describe("PATCH /api/articles/:article_id", () => {
           testData.articleData[articleID - 1]
         );
       });
+  });
+
+  test("throws an error if article ID is an invalid data type", () => {
+    const articleID = "string";
+    const newVote = { inc_votes: 2 };
+    return request(app)
+      .patch(`/api/articles/${articleID}`)
+      .send(newVote)
+      .expect(400);
+  });
+
+  test("throws an error if article ID does not exist", () => {
+    const articleID = 899;
+    const newVote = { inc_votes: 2 };
+    return request(app)
+      .patch(`/api/articles/${articleID}`)
+      .send(newVote)
+      .expect(404);
   });
 
   test("throws an error if request body is empty", () => {
@@ -98,7 +116,7 @@ describe("PATCH /api/articles/:article_id", () => {
     return request(app)
       .patch(`/api/articles/${articleID}`)
       .send(newVote)
-      .expect(400);
+      .expect(422);
   });
 
   test("throws an error if there is another property in the request body", () => {
@@ -111,7 +129,7 @@ describe("PATCH /api/articles/:article_id", () => {
   });
 });
 
-describe.only("GET /api/articles", () => {
+describe("GET /api/articles", () => {
   test("responds with an array of article objects, which is sorted chronologically by default", () => {
     return request(app)
       .get("/api/articles")
@@ -156,6 +174,8 @@ describe.only("GET /api/articles", () => {
         expect(articles).toBeSortedBy("votes");
       });
   });
+
+  // sort_by: title, topic, author
 
   test("throws an error if sort_by query is for a non-existing column", () => {
     return request(app).get("/api/articles?sort_by=random").expect(400);
@@ -210,8 +230,8 @@ describe.only("GET /api/articles", () => {
     return request(app).get("/api/articles?topic=weather").expect(400);
   });
 
-  test("throws an error if there are no related articles of the topic", () => {
-    return request(app).get("/api/articles?topic=weather").expect(422);
+  test("throws an error if there are no related articles", () => {
+    return request(app).get("/api/articles?topic=paper").expect(404);
   });
 });
 
@@ -234,15 +254,27 @@ describe("GET /api/articles/:article_id/comments", () => {
         });
       });
   });
+
+  test("throws an error if article ID is an invalid data type", () => {
+    const articleID = "string";
+    return request(app).get(`/api/articles/${articleID}/comments`).expect(400);
+  });
+
+  test("throws an error if article ID does not exist", () => {
+    const articleID = 899;
+    return request(app).get(`/api/articles/${articleID}/comments`).expect(404);
+  });
+
+  test("throws an error if there are no comments under that article", () => {
+    const articleID = 2;
+    return request(app).get(`/api/articles/${articleID}/comments`).expect(404);
+  });
 });
 
 describe("POST /api/articles/:article_id/comments", () => {
   test("request body accepts an object to post a comment", () => {
     const articleID = 2;
     const newComment = { username: "butter_bridge", body: "interesting" };
-    expect(
-      testData.userData.some((user) => user.username === newComment.username)
-    ).toBe(true);
     return request(app)
       .post(`/api/articles/${articleID}/comments`)
       .send(newComment)
@@ -258,6 +290,93 @@ describe("POST /api/articles/:article_id/comments", () => {
           created_at: expect.any(String),
         });
       });
+  });
+
+  test("throws an error if article ID is an invalid data type", () => {
+    const articleID = "string";
+    const newComment = { username: "butter_bridge", body: "interesting" };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(400);
+  });
+
+  test("throws an error if article ID does not exist", () => {
+    const articleID = 899;
+    const newComment = { username: "butter_bridge", body: "interesting" };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(404);
+  });
+
+  test("throws an error if request body is empty", () => {
+    const articleID = 2;
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send()
+      .expect(400);
+  });
+
+  test("throws an error if request body is an empty object", () => {
+    const articleID = 2;
+    const newComment = {};
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(400);
+  });
+
+  test("throws an error if request body does not have a username property", () => {
+    const articleID = 2;
+    const newComment = { body: "interesting" };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(400);
+  });
+
+  test("throws an error if request body does not have a body property", () => {
+    const articleID = 2;
+    const newComment = { username: "butter_bridge" };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(400);
+  });
+
+  test("throws an error if values in the request body are invalid", () => {
+    const articleID = 2;
+    const newComment = { username: 1, body: 2 };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(422);
+  });
+
+  test("throws an error if there is an extra property in the request body", () => {
+    const articleID = 2;
+    const newComment = {
+      username: "butter_bridge",
+      body: "interesting",
+      rating: "4/5",
+    };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(422);
+  });
+
+  test("throws an error if username does not exist", () => {
+    const articleID = 2;
+    const newComment = {
+      username: "niharika",
+      body: "interesting",
+    };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(405);
   });
 });
 
@@ -285,11 +404,6 @@ describe("GET /api", () => {
   });
 
   test("throws an error if route is invalid", () => {
-    return request(app)
-      .get("/not-a-route")
-      .expect(404)
-      .then((response) => {
-        //
-      });
+    return request(app).get("/not-a-route").expect(404);
   });
 });
