@@ -6,7 +6,9 @@
   "scripts": {
     "setup-dbs": "psql -f ./db/setup.sql",
     "seed": "node ./db/seeds/run-seed.js",
-    "test": "jest"
+    "seed:prod": "NODE_ENV=production DATABASE_URL=$(heroku config:get DATABASE_URL) npm run seed",
+    "test": "npm run setup-dbs && NODE_ENV=test jest",
+    "start": "node listen.js"
   },
   "repository": {
     "type": "git",
@@ -19,6 +21,17 @@
     "url": "https://github.com/northcoders/be-nc-news/issues"
   },
   "homepage": "https://github.com/northcoders/be-nc-news#readme",
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "jest": "^27.3.1",
+    "jest-sorted": "^1.0.12",
+    "nodemon": "^2.0.15",
+    "prettier": "2.5.0"
+  },
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "pg": "^8.7.1",
+    "pg-format": "^1.0.4",
+    "supertest": "^6.1.6"
+  }
 }
