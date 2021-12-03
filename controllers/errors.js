@@ -1,7 +1,7 @@
 const db = require("../db/connection.js");
 
 exports.checkArticleID = (articleID) => {
-  if (!Number.isInteger(parseInt(articleID))) {
+  if (!articleID.match(/^\d+$/)) {
     return Promise.reject({
       status: 400,
       msg: "Invalid article ID",
@@ -23,7 +23,7 @@ exports.checkArticleID = (articleID) => {
 };
 
 exports.checkRequestBody = (requestBody) => {
-  if (!requestBody || requestBody === {}) {
+  if (Object.keys(requestBody).length === 0) {
     return Promise.reject({
       status: 400,
       msg: "Request body is empty",
@@ -32,13 +32,13 @@ exports.checkRequestBody = (requestBody) => {
   return requestBody;
 };
 
-exports.checkVotes = (votes) => {
+exports.checkVotesRequest = (votes) => {
   if (!votes.inc_votes) {
     return Promise.reject({
       status: 400,
       msg: "The request body must be structured as follows: { inc_votes: number_of_votes }",
     });
-  } else if (!Number.isInteger(votes.inc_votes)) {
+  } else if (/^\d+$/.test(votes.inc_votes) === false) {
     return Promise.reject({
       status: 422,
       msg: "Votes must be an integer!",
@@ -90,7 +90,7 @@ exports.checkTopicQuery = (topic) => {
       .then((topic) => {
         if (topic.rows.length === 0) {
           return Promise.reject({
-            status: 400,
+            status: 404,
             msg: "This topic does not exist",
           });
         }
@@ -116,21 +116,13 @@ exports.noComments = (articleID) => {
     });
 };
 
-exports.checkComment = (newComment) => {
-  if (!newComment.username || !newComment.body) {
+exports.checkCommentRequest = (comment) => {
+  if (!comment.username || !comment.body) {
     return Promise.reject({
       status: 400,
       msg: "The request body must be structured as follows: { username: your_username, body: write your comment here }",
     });
-  } else if (
-    typeof newComment.username !== "string" ||
-    typeof newComment.body !== "string"
-  ) {
-    return Promise.reject({
-      status: 422,
-      msg: "Username and body must be a string",
-    });
-  } else if (Object.keys(newComment).length > 2) {
+  } else if (Object.keys(comment).length > 2) {
     return Promise.reject({
       status: 422,
       msg: "The request body must be structured as follows: { username: your_username, body: write your comment here }",
@@ -138,7 +130,7 @@ exports.checkComment = (newComment) => {
   } else {
     return db
       .query(`SELECT * FROM users WHERE users.username = $1;`, [
-        newComment.username,
+        comment.username,
       ])
       .then((username) => {
         if (username.rows.length === 0) {
@@ -147,8 +139,53 @@ exports.checkComment = (newComment) => {
             msg: "The username you have given does not exist in this database",
           });
         }
-        return newComment;
+        return comment;
       });
+  }
+};
+
+exports.checkCommentID = (commentID) => {
+  if (!commentID.match(/^\d+$/)) {
+    return Promise.reject({
+      status: 400,
+      msg: "Invalid comment ID",
+    });
+  }
+  return db
+    .query(`SELECT * FROM comments WHERE comments.comment_id = $1;`, [
+      commentID,
+    ])
+    .then((result) => {
+      if (result.rows.length === 0) {
+        return Promise.reject({
+          status: 404,
+          msg: "Comment ID does not exist",
+        });
+      }
+      return commentID;
+    });
+};
+
+exports.checkUsername = (username) => {
+  return db
+    .query(`SELECT * FROM users WHERE users.username = $1;`, [username])
+    .then((result) => {
+      if (result.rows.length === 0) {
+        return Promise.reject({
+          status: 404,
+          msg: "Username does not exist",
+        });
+      }
+      return username;
+    });
+};
+
+exports.handleCustomErrors = (err, req, res, next) => {
+  if (err.status && err.msg) {
+    console.log(err.status, err.msg);
+    res.status(err.status).send({ msg: err.msg });
+  } else {
+    next(err);
   }
 };
 
@@ -161,6 +198,5 @@ exports.handlePSQLErrors = (err, req, res, next) => {
 };
 
 exports.handleStatus500 = (err, req, res, next) => {
-  console.log(err);
   res.status(500).send({ msg: "Internal server error" });
 };

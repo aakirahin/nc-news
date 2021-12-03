@@ -26,6 +26,10 @@ describe("GET /api/topics", () => {
         });
       });
   });
+
+  test("throws an error if route is invalid", () => {
+    return request(app).get("/api/not-a-route").expect(404);
+  });
 });
 
 describe("GET /api/articles/:article_id", () => {
@@ -35,8 +39,16 @@ describe("GET /api/articles/:article_id", () => {
       .get(`/api/articles/${articleID}`)
       .expect(200)
       .then((response) => {
-        expect(response.body).toBeInstanceOf(Object);
-        expect(response.body.articleID).toEqual(articleID);
+        expect(response.body.article).toBeInstanceOf(Object);
+        expect(response.body.article).toMatchObject({
+          author: expect.any(String),
+          title: expect.any(String),
+          article_id: articleID,
+          body: expect.any(String),
+          topic: expect.any(String),
+          created_at: expect.any(String),
+          votes: expect.any(Number),
+        });
       });
   });
 
@@ -60,8 +72,8 @@ describe("PATCH /api/articles/:article_id", () => {
       .send(newVote)
       .expect(200)
       .then((response) => {
-        expect(response.body).toBeInstanceOf(Object);
-        expect(response.body.articleID).toBe(2);
+        expect(response.body.updatedArticleInfo).toBeInstanceOf(Object);
+        expect(response.body.updatedArticleInfo.article_id).toBe(articleID);
         expect(response.body.updatedArticleInfo.votes).toBe(2);
         expect(response.body.updatedArticleInfo).not.toBe(
           testData.articleData[articleID - 1]
@@ -227,11 +239,11 @@ describe("GET /api/articles", () => {
   });
 
   test("throws an error if topic query does not exist", () => {
-    return request(app).get("/api/articles?topic=weather").expect(400);
+    return request(app).get("/api/articles?topic=weather").expect(404);
   });
 
   test("throws an error if there are no related articles", () => {
-    return request(app).get("/api/articles?topic=paper").expect(404);
+    return request(app).get("/api/articles?topic=paper").expect(204);
   });
 });
 
@@ -280,7 +292,6 @@ describe("POST /api/articles/:article_id/comments", () => {
       .send(newComment)
       .expect(201)
       .then((response) => {
-        console.log(response.body);
         expect(response.body.comment).toBeInstanceOf(Object);
         expect(response.body.comment).toMatchObject({
           body: newComment.body,
@@ -345,15 +356,6 @@ describe("POST /api/articles/:article_id/comments", () => {
       .expect(400);
   });
 
-  test("throws an error if values in the request body are invalid", () => {
-    const articleID = 2;
-    const newComment = { username: 1, body: 2 };
-    return request(app)
-      .post(`/api/articles/${articleID}/comments`)
-      .send(newComment)
-      .expect(422);
-  });
-
   test("throws an error if there is an extra property in the request body", () => {
     const articleID = 2;
     const newComment = {
@@ -390,6 +392,16 @@ describe("DELETE /api/comments/:comment_id", () => {
         expect(response.res.statusMessage).toEqual("No Content");
       });
   });
+
+  test("throws an error if comment ID is an invalid data type", () => {
+    const commentID = "string";
+    return request(app).del(`/api/comments/${commentID}`).expect(400);
+  });
+
+  test("throws an error if comment ID is does not exist", () => {
+    const commentID = 889;
+    return request(app).del(`/api/comments/${commentID}`).expect(404);
+  });
 });
 
 describe("GET /api", () => {
@@ -405,5 +417,158 @@ describe("GET /api", () => {
 
   test("throws an error if route is invalid", () => {
     return request(app).get("/not-a-route").expect(404);
+  });
+});
+
+describe("GET /api/users", () => {
+  test("responds with an array of user objects", () => {
+    return request(app)
+      .get("/api/users")
+      .expect(200)
+      .then((response) => {
+        expect(response.body.users).toBeInstanceOf(Array);
+        response.body.users.forEach((user) => {
+          expect(user).toEqual(
+            expect.objectContaining({
+              username: expect.any(String),
+            })
+          );
+        });
+      });
+  });
+
+  test("throws an error if route is invalid", () => {
+    return request(app).get("/api/not-a-route").expect(404);
+  });
+});
+
+describe("GET /api/users/:username", () => {
+  test("responds with a user object of given id", () => {
+    const username = "icellusedkars";
+    return request(app)
+      .get(`/api/users/${username}`)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.user).toBeInstanceOf(Object);
+        expect(response.body.user).toEqual(
+          expect.objectContaining({
+            username: username,
+            avatar_url: expect.any(String),
+            name: expect.any(String),
+          })
+        );
+      });
+  });
+
+  test("throws an error if username does not exist", () => {
+    const username = "niharika";
+    return request(app).get(`/api/users/${username}`).expect(404);
+  });
+});
+
+describe("PATCH /api/comments/:comment_id", () => {
+  test("request body accepts an object which updates the specified comment", () => {
+    const commentID = 8;
+    const editedComment = {
+      username: "icellusedkars",
+      body: "Delicious knekkebrod",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.editedComment).toBeInstanceOf(Object);
+        expect(response.body.editedComment.comment_id).toBe(commentID);
+        expect(response.body.editedComment.body).toEqual(editedComment.body);
+        expect(response.body.updatedArticleInfo).not.toBe(
+          testData.commentData[commentID - 1]
+        );
+      });
+  });
+
+  test("throws an error if comment ID is an invalid data type", () => {
+    const commentID = "string";
+    const editedComment = {
+      username: "icellusedkars",
+      body: "Delicious knekkebrod",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(400);
+  });
+
+  test("throws an error if comment ID does not exist", () => {
+    const commentID = 889;
+    const editedComment = {
+      username: "icellusedkars",
+      body: "Delicious knekkebrod",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(404);
+  });
+
+  test("throws an error if request body is empty", () => {
+    const commentID = 8;
+    return request(app).patch(`/api/comments/${commentID}`).send().expect(400);
+  });
+
+  test("throws an error if request body is an empty object", () => {
+    const commentID = 8;
+    const editedComment = {};
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(400);
+  });
+
+  test("throws an error if request body does not have a username property", () => {
+    const commentID = 8;
+    const editedComment = {
+      body: "Delicious knekkebrod",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(400);
+  });
+
+  test("throws an error if request body does not have a body property", () => {
+    const commentID = 8;
+    const editedComment = {
+      username: "icellusedkars",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(400);
+  });
+
+  test("throws an error if username does not exist", () => {
+    const commentID = 8;
+    const editedComment = {
+      username: "niharika",
+      body: "Delicious knekkebrod",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(405);
+  });
+
+  test("throws an error if there is another property in the request body", () => {
+    const commentID = 8;
+    const editedComment = {
+      username: "icellusedkars",
+      body: "Delicious knekkebrod",
+      date: "03/12/2021",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(editedComment)
+      .expect(422);
   });
 });

@@ -5,12 +5,31 @@ exports.removeComment = (commentID) => {
     .query(`DELETE FROM comments WHERE comments.comment_id = $1;`, [commentID])
     .then(() => {
       return db.query(
-        `SELECT EXISTS(SELECT 1 FROM comments WHERE comments.comment_id = $1);`,
+        `SELECT * FROM comments WHERE comments.comment_id = $1;`,
         [commentID]
       );
     })
     .then((comment) => {
-      const exists = comment.rows[0];
-      return exists;
+      if (comment.rows > 0) {
+        Promise.reject({
+          status: 500,
+          msg: "Unable to delete comment",
+        });
+      }
+      return "Comment deleted!";
+    });
+};
+
+exports.editComment = (commentID, editedComment) => {
+  return db
+    .query(
+      `UPDATE comments 
+      SET body = $1 
+      WHERE comment_id = $2
+      RETURNING *;`,
+      [editedComment.body, commentID]
+    )
+    .then((result) => {
+      return result.rows[0];
     });
 };

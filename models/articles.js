@@ -55,7 +55,7 @@ exports.selectArticles = (sort_by, order, topic) => {
   return db.query(query + groupBy + sortBy + orderBy).then((result) => {
     if (result.rows.length === 0) {
       return Promise.reject({
-        status: 404,
+        status: 204,
         msg: `No related articles under the topic "${topic}"`,
       });
     }

@@ -8,11 +8,11 @@ const {
 const {
   checkArticleID,
   checkRequestBody,
-  checkVotes,
+  checkVotesRequest,
   checkSortByQuery,
   checkOrderQuery,
   checkTopicQuery,
-  checkComment,
+  checkCommentRequest,
   noComments,
 } = require("./errors");
 
@@ -20,9 +20,7 @@ exports.getArticleByID = (req, res, next) => {
   const { articleID } = req.params;
   Promise.all([checkArticleID(articleID), selectArticleByID(articleID)])
     .then((article) => {
-      res
-        .status(200)
-        .send({ articleID: article[1].article_id, article: article[1] });
+      res.status(200).send({ article: article[1] });
     })
     .catch((err) => {
       next(err);
@@ -35,13 +33,12 @@ exports.patchVotes = (req, res, next) => {
   Promise.all([
     checkArticleID(articleID),
     checkRequestBody(votes),
-    checkVotes(votes),
+    checkVotesRequest(votes),
     updateVotes(articleID, votes),
   ])
     .then((articleInfo) => {
       res.status(200).send({
         msg: `Votes updated by ${votes.inc_votes}`,
-        articleID: articleInfo[3].article_id,
         updatedArticleInfo: articleInfo[3],
       });
     })
@@ -92,7 +89,7 @@ exports.postNewComment = (req, res, next) => {
   Promise.all([
     checkArticleID(articleID),
     checkRequestBody(newComment),
-    checkComment(newComment),
+    checkCommentRequest(newComment),
     addNewComment(articleID, newComment),
   ])
     .then((postedComment) => {
