@@ -1,1 +1,0 @@
-GET https://localhost:9090/api/articles?p=1&limit=5

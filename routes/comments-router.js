@@ -3,7 +3,6 @@ const { deleteComment, patchComment } = require("../controllers/comments");
 
 const commentsRouter = express.Router();
 
-commentsRouter.delete("/:commentID", deleteComment);
-commentsRouter.patch("/:commentID", patchComment);
+commentsRouter.route("/:commentID").delete(deleteComment).patch(patchComment);
 
 module.exports = commentsRouter;

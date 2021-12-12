@@ -2,7 +2,6 @@ const db = require("../connection.js");
 const format = require("pg-format");
 
 const seed = (data) => {
-  console.log(`Running seed with ${process.env.PGDATABASE}!`);
   const { articleData, commentData, topicData, userData } = data;
   // 1. create tables
   return (

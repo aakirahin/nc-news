@@ -20,14 +20,14 @@ exports.removeComment = (commentID) => {
     });
 };
 
-exports.editComment = (commentID, editedComment) => {
+exports.editComment = (commentID, body) => {
   return db
     .query(
       `UPDATE comments 
       SET body = $1 
       WHERE comment_id = $2
       RETURNING *;`,
-      [editedComment.body, commentID]
+      [body, commentID]
     )
     .then((result) => {
       return result.rows[0];

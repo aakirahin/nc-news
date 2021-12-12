@@ -3,8 +3,8 @@ const {
   handleStatus500,
   handlePSQLErrors,
   handleCustomErrors,
-} = require("./controllers/errors.js");
-const apiRouter = require("./routes/api-router.js");
+} = require("./controllers/errors");
+const apiRouter = require("./routes/api-router");
 
 const app = express();
 

@@ -1,9 +1,5 @@
 const { removeComment, editComment } = require("../models/comments");
-const {
-  checkCommentID,
-  checkRequestBody,
-  checkCommentRequest,
-} = require("./errors");
+const { checkCommentID, checkCommentRequest } = require("./errors");
 
 exports.deleteComment = (req, res, next) => {
   const { commentID } = req.params;
@@ -18,15 +14,14 @@ exports.deleteComment = (req, res, next) => {
 
 exports.patchComment = (req, res, next) => {
   const { commentID } = req.params;
-  const editedComment = req.body;
+  const { username, body } = req.body;
   Promise.all([
     checkCommentID(commentID),
-    checkRequestBody(editedComment),
-    checkCommentRequest(editedComment),
-    editComment(commentID, editedComment),
+    checkCommentRequest(username, body),
+    editComment(commentID, body),
   ])
     .then((comment) => {
-      res.status(200).send({ editedComment: comment[3] });
+      res.status(200).send({ editedComment: comment[2] });
     })
     .catch((err) => {
       next(err);

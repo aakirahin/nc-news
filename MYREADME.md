@@ -1,6 +1,6 @@
 ### LINK TO HOSTED VERSION
 
-`postgres://jzoakxhlovogir:845a3642a80b08a4acd4087d59cec108e2130a02d98a02a9674000b62893a43d@ec2-52-86-25-51.compute-1.amazonaws.com:5432/dejdvb8pla5po4`
+https://git.heroku.com/ncnews.git
 
 # SUMMARY
 

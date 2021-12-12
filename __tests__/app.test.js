@@ -16,6 +16,7 @@ describe("GET /api/topics", () => {
       .expect(200)
       .then((response) => {
         expect(response.body.topics).toBeInstanceOf(Array);
+        expect(response.body.topics.length).not.toBe(0);
         response.body.topics.forEach((topic) => {
           expect(topic).toEqual(
             expect.objectContaining({
@@ -48,6 +49,7 @@ describe("GET /api/articles/:article_id", () => {
           topic: expect.any(String),
           created_at: expect.any(String),
           votes: expect.any(Number),
+          comment_count: expect.any(String),
         });
       });
   });
@@ -75,9 +77,6 @@ describe("PATCH /api/articles/:article_id", () => {
         expect(response.body.updatedArticleInfo).toBeInstanceOf(Object);
         expect(response.body.updatedArticleInfo.article_id).toBe(articleID);
         expect(response.body.updatedArticleInfo.votes).toBe(2);
-        expect(response.body.updatedArticleInfo).not.toBe(
-          testData.articleData[articleID - 1]
-        );
       });
   });
 
@@ -99,45 +98,18 @@ describe("PATCH /api/articles/:article_id", () => {
       .expect(404);
   });
 
-  test("throws an error if request body is empty", () => {
-    const articleID = 2;
-    return request(app).patch(`/api/articles/${articleID}`).send().expect(400);
-  });
-
-  test("throws an error if request body is an empty object", () => {
-    const articleID = 2;
-    const newVote = {};
-    return request(app)
-      .patch(`/api/articles/${articleID}`)
-      .send(newVote)
-      .expect(400);
-  });
-
-  test("throws an error if request body does not have inc_votes property", () => {
+  test("no effect to article if request body does not have inc_votes property", () => {
     const articleID = 2;
     const newVote = { votes: 2 };
     return request(app)
       .patch(`/api/articles/${articleID}`)
       .send(newVote)
-      .expect(400);
-  });
-
-  test("throws an error if the value of inc_votes is invalid", () => {
-    const articleID = 2;
-    const newVote = { inc_votes: "string" };
-    return request(app)
-      .patch(`/api/articles/${articleID}`)
-      .send(newVote)
-      .expect(422);
-  });
-
-  test("throws an error if there is another property in the request body", () => {
-    const articleID = 2;
-    const newVote = { inc_votes: 2, name: "Mitch" };
-    return request(app)
-      .patch(`/api/articles/${articleID}`)
-      .send(newVote)
-      .expect(422);
+      .expect(200)
+      .then((response) => {
+        expect(response.body.updatedArticleInfo).toBeInstanceOf(Object);
+        expect(response.body.updatedArticleInfo.article_id).toBe(articleID);
+        expect(response.body.updatedArticleInfo.votes).toBe(0);
+      });
   });
 });
 
@@ -148,6 +120,7 @@ describe("GET /api/articles", () => {
       .expect(200)
       .then((response) => {
         expect(response.body.articles).toBeInstanceOf(Array);
+        expect(response.body.articles.length).not.toBe(0);
         response.body.articles.forEach((article) => {
           expect(article).toMatchObject({
             author: expect.any(String),
@@ -161,6 +134,7 @@ describe("GET /api/articles", () => {
         });
         expect(response.body.articles).toBeSortedBy("created_at", {
           coerce: true,
+          descending: true,
         });
       });
   });
@@ -170,9 +144,10 @@ describe("GET /api/articles", () => {
       .get("/api/articles?sort_by=article_id")
       .expect(200)
       .then((response) => {
-        const articles = response.body.articles;
-        expect(articles).toBeInstanceOf(Array);
-        expect(articles).toBeSortedBy("article_id");
+        expect(response.body.articles).toBeInstanceOf(Array);
+        expect(response.body.articles).toBeSortedBy("article_id", {
+          descending: true,
+        });
       });
   });
 
@@ -181,40 +156,36 @@ describe("GET /api/articles", () => {
       .get("/api/articles?sort_by=votes")
       .expect(200)
       .then((response) => {
-        const articles = response.body.articles;
-        expect(articles).toBeInstanceOf(Array);
-        expect(articles).toBeSortedBy("votes");
-      });
-  });
-
-  // sort_by: title, topic, author
-
-  test("throws an error if sort_by query is for a non-existing column", () => {
-    return request(app).get("/api/articles?sort_by=random").expect(400);
-  });
-
-  test("accepts order query which can sort articles in descending order of created_at", () => {
-    return request(app)
-      .get("/api/articles?order=desc")
-      .expect(200)
-      .then((response) => {
-        const articles = response.body.articles;
-        expect(articles).toBeInstanceOf(Array);
-        expect(articles).toBeSortedBy("created_at", {
-          coerce: true,
+        expect(response.body.articles).toBeInstanceOf(Array);
+        expect(response.body.articles).toBeSortedBy("votes", {
           descending: true,
         });
       });
   });
 
-  test("accepts order query which sorts the articles in given order by sort_by query", () => {
+  test("throws an error if sort_by query is for a non-existing column", () => {
+    return request(app).get("/api/articles?sort_by=random").expect(400);
+  }); //
+
+  test("accepts order query which can sort articles in ascending order of default sort_by", () => {
+    return request(app)
+      .get("/api/articles?order=desc")
+      .expect(200)
+      .then((response) => {
+        expect(response.body.articles).toBeInstanceOf(Array);
+        expect(response.body.articles).toBeSortedBy("created_at", {
+          coerce: true,
+        });
+      });
+  });
+
+  test("accepts order query which sorts the articles in given order of sort_by query", () => {
     return request(app)
       .get("/api/articles?sort_by=votes&order=desc")
       .expect(200)
       .then((response) => {
-        const articles = response.body.articles;
-        expect(articles).toBeInstanceOf(Array);
-        expect(articles).toBeSortedBy("votes", {
+        expect(response.body.articles).toBeInstanceOf(Array);
+        expect(response.body.articles).toBeSortedBy("votes", {
           descending: true,
         });
       });
@@ -222,7 +193,7 @@ describe("GET /api/articles", () => {
 
   test("throws an error if order query is invalid", () => {
     return request(app).get("/api/articles?order=increase").expect(400);
-  });
+  }); //
 
   test("accepts topic query which filters articles of that topic", () => {
     const topic = "mitch";
@@ -230,9 +201,9 @@ describe("GET /api/articles", () => {
       .get(`/api/articles?topic=${topic}`)
       .expect(200)
       .then((response) => {
-        const articles = response.body.articles;
-        expect(articles).toBeInstanceOf(Array);
-        articles.forEach((article) => {
+        expect(response.body.articles).toBeInstanceOf(Array);
+        expect(response.body.articles.length).not.toBe(0);
+        response.body.articles.forEach((article) => {
           expect(article.topic).toEqual(topic);
         });
       });
@@ -242,8 +213,14 @@ describe("GET /api/articles", () => {
     return request(app).get("/api/articles?topic=weather").expect(404);
   });
 
-  test("throws an error if there are no related articles", () => {
-    return request(app).get("/api/articles?topic=paper").expect(204);
+  test("responds with an empty array if there are no related articles", () => {
+    return request(app)
+      .get("/api/articles?topic=paper")
+      .expect(200)
+      .then((response) => {
+        expect(response.body.articles).toBeInstanceOf(Array);
+        expect(response.body.articles.length).toBe(0);
+      });
   });
 });
 
@@ -255,6 +232,7 @@ describe("GET /api/articles/:article_id/comments", () => {
       .expect(200)
       .then((response) => {
         expect(response.body.comments).toBeInstanceOf(Array);
+        expect(response.body.comments.length).not.toBe(0);
         response.body.comments.forEach((comment) => {
           expect(comment).toMatchObject({
             article_id: articleID,
@@ -277,9 +255,14 @@ describe("GET /api/articles/:article_id/comments", () => {
     return request(app).get(`/api/articles/${articleID}/comments`).expect(404);
   });
 
-  test("throws an error if there are no comments under that article", () => {
+  test("responds with an empty array if there are no comments under that article", () => {
     const articleID = 2;
-    return request(app).get(`/api/articles/${articleID}/comments`).expect(404);
+    return request(app)
+      .get(`/api/articles/${articleID}/comments`)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.comments).toEqual([]);
+      });
   });
 });
 
@@ -321,23 +304,6 @@ describe("POST /api/articles/:article_id/comments", () => {
       .expect(404);
   });
 
-  test("throws an error if request body is empty", () => {
-    const articleID = 2;
-    return request(app)
-      .post(`/api/articles/${articleID}/comments`)
-      .send()
-      .expect(400);
-  });
-
-  test("throws an error if request body is an empty object", () => {
-    const articleID = 2;
-    const newComment = {};
-    return request(app)
-      .post(`/api/articles/${articleID}/comments`)
-      .send(newComment)
-      .expect(400);
-  });
-
   test("throws an error if request body does not have a username property", () => {
     const articleID = 2;
     const newComment = { body: "interesting" };
@@ -354,19 +320,6 @@ describe("POST /api/articles/:article_id/comments", () => {
       .post(`/api/articles/${articleID}/comments`)
       .send(newComment)
       .expect(400);
-  });
-
-  test("throws an error if there is an extra property in the request body", () => {
-    const articleID = 2;
-    const newComment = {
-      username: "butter_bridge",
-      body: "interesting",
-      rating: "4/5",
-    };
-    return request(app)
-      .post(`/api/articles/${articleID}/comments`)
-      .send(newComment)
-      .expect(422);
   });
 
   test("throws an error if username does not exist", () => {
@@ -427,6 +380,7 @@ describe("GET /api/users", () => {
       .expect(200)
       .then((response) => {
         expect(response.body.users).toBeInstanceOf(Array);
+        expect(response.body.users.length).not.toBe(0);
         response.body.users.forEach((user) => {
           expect(user).toEqual(
             expect.objectContaining({
@@ -481,9 +435,6 @@ describe("PATCH /api/comments/:comment_id", () => {
         expect(response.body.editedComment).toBeInstanceOf(Object);
         expect(response.body.editedComment.comment_id).toBe(commentID);
         expect(response.body.editedComment.body).toEqual(editedComment.body);
-        expect(response.body.updatedArticleInfo).not.toBe(
-          testData.commentData[commentID - 1]
-        );
       });
   });
 
@@ -509,20 +460,6 @@ describe("PATCH /api/comments/:comment_id", () => {
       .patch(`/api/comments/${commentID}`)
       .send(editedComment)
       .expect(404);
-  });
-
-  test("throws an error if request body is empty", () => {
-    const commentID = 8;
-    return request(app).patch(`/api/comments/${commentID}`).send().expect(400);
-  });
-
-  test("throws an error if request body is an empty object", () => {
-    const commentID = 8;
-    const editedComment = {};
-    return request(app)
-      .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
-      .expect(400);
   });
 
   test("throws an error if request body does not have a username property", () => {
@@ -557,18 +494,5 @@ describe("PATCH /api/comments/:comment_id", () => {
       .patch(`/api/comments/${commentID}`)
       .send(editedComment)
       .expect(405);
-  });
-
-  test("throws an error if there is another property in the request body", () => {
-    const commentID = 8;
-    const editedComment = {
-      username: "icellusedkars",
-      body: "Delicious knekkebrod",
-      date: "03/12/2021",
-    };
-    return request(app)
-      .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
-      .expect(422);
   });
 });
