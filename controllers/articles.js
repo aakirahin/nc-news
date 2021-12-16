@@ -1,31 +1,40 @@
 const {
   selectArticleByID,
-  updateVotes,
+  updateArticle,
   selectArticles,
   selectCommentsOfArticle,
   addNewComment,
 } = require("../models/articles");
-const { checkArticleID, checkCommentRequest, checkTopic } = require("./errors");
+const { checkExists, checkValid } = require("../models/utils");
 
 exports.getArticleByID = (req, res, next) => {
   const { articleID } = req.params;
-  Promise.all([checkArticleID(articleID), selectArticleByID(articleID)])
+  Promise.all([
+    checkExists("articles", "article_id", articleID),
+    checkValid(articleID),
+    selectArticleByID(articleID),
+  ])
     .then((article) => {
-      res.status(200).send({ article: article[1] });
+      res.status(200).send({ article: article[2] });
     })
     .catch((err) => {
       next(err);
     });
 };
 
-exports.patchVotes = (req, res, next) => {
+exports.patchArticle = (req, res, next) => {
   const { articleID } = req.params;
-  const { inc_votes } = req.body;
-  Promise.all([checkArticleID(articleID), updateVotes(articleID, inc_votes)])
-    .then((articleInfo) => {
+  const { inc_votes, body } = req.body;
+  Promise.all([
+    checkExists("articles", "article_id", articleID),
+    checkValid(articleID),
+    checkValid(inc_votes),
+    updateArticle(articleID, inc_votes, body),
+  ])
+    .then((article) => {
       res.status(200).send({
-        msg: `Votes updated by ${inc_votes}`,
-        updatedArticleInfo: articleInfo[1],
+        msg: `Article has been updated!`,
+        article: article[3],
       });
     })
     .catch((err) => {
@@ -35,7 +44,10 @@ exports.patchVotes = (req, res, next) => {
 
 exports.getArticles = (req, res, next) => {
   const { sort_by, order, topic } = req.query;
-  Promise.all([checkTopic(topic), selectArticles(sort_by, order, topic)])
+  Promise.all([
+    checkExists("topics", "slug", topic),
+    selectArticles(sort_by, order, topic),
+  ])
     .then((articles) => {
       res.status(200).send({
         articles: articles[1],
@@ -48,9 +60,13 @@ exports.getArticles = (req, res, next) => {
 
 exports.getCommentsOfArticle = (req, res, next) => {
   const { articleID } = req.params;
-  Promise.all([checkArticleID(articleID), selectCommentsOfArticle(articleID)])
+  Promise.all([
+    checkExists("articles", "article_id", articleID),
+    checkValid(articleID),
+    selectCommentsOfArticle(articleID),
+  ])
     .then((comments) => {
-      res.status(200).send({ articleID: comments[0], comments: comments[1] });
+      res.status(200).send({ articleID: comments[0], comments: comments[2] });
     })
     .catch((err) => {
       next(err);
@@ -61,14 +77,15 @@ exports.postNewComment = (req, res, next) => {
   const { articleID } = req.params;
   const { username, body } = req.body;
   Promise.all([
-    checkArticleID(articleID),
-    checkCommentRequest(username, body),
+    checkExists("articles", "article_id", articleID),
+    checkExists("users", "username", username),
+    checkValid(articleID),
     addNewComment(articleID, username, body),
   ])
     .then((postedComment) => {
       res.status(201).send({
         msg: "Your comment has been posted!",
-        comment: postedComment[2],
+        comment: postedComment[3],
       });
     })
     .catch((err) => {

@@ -1,9 +1,13 @@
 const { removeComment, editComment } = require("../models/comments");
-const { checkCommentID, checkCommentRequest } = require("./errors");
+const { checkExists, checkValid } = require("../models/utils");
 
 exports.deleteComment = (req, res, next) => {
   const { commentID } = req.params;
-  Promise.all([checkCommentID(commentID), removeComment(commentID)])
+  Promise.all([
+    checkExists("comments", "comment_id", commentID),
+    checkValid(commentID),
+    removeComment(commentID),
+  ])
     .then(() => {
       res.status(204).send("");
     })
@@ -14,14 +18,16 @@ exports.deleteComment = (req, res, next) => {
 
 exports.patchComment = (req, res, next) => {
   const { commentID } = req.params;
-  const { username, body } = req.body;
+  const { username, inc_votes, body } = req.body;
   Promise.all([
-    checkCommentID(commentID),
-    checkCommentRequest(username, body),
-    editComment(commentID, body),
+    checkExists("comments", "comment_id", commentID),
+    checkExists("users", "username", username),
+    checkValid(commentID),
+    checkValid(inc_votes),
+    editComment(commentID, username, inc_votes, body),
   ])
     .then((comment) => {
-      res.status(200).send({ editedComment: comment[2] });
+      res.status(200).send({ comment: comment[4] });
     })
     .catch((err) => {
       next(err);

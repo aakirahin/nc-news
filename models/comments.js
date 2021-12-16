@@ -9,27 +9,40 @@ exports.removeComment = (commentID) => {
         [commentID]
       );
     })
-    .then((comment) => {
-      if (comment.rows > 0) {
-        Promise.reject({
-          status: 500,
-          msg: "Unable to delete comment",
-        });
-      }
+    .then((result) => {
       return "Comment deleted!";
     });
 };
 
-exports.editComment = (commentID, body) => {
+exports.editComment = (commentID, username, inc_votes = 0, body) => {
+  if (!username) {
+    return Promise.reject({
+      status: 400,
+      msg: "Username missing",
+    });
+  }
   return db
     .query(
       `UPDATE comments 
-      SET body = $1 
+      SET votes = votes + $1 
       WHERE comment_id = $2
       RETURNING *;`,
-      [body, commentID]
+      [inc_votes, commentID]
     )
-    .then((result) => {
-      return result.rows[0];
+    .then((updatedVotes) => {
+      if (body) {
+        return db
+          .query(
+            `UPDATE comments 
+            SET body = $1
+            WHERE comment_id = $2
+            RETURNING *;`,
+            [body, commentID]
+          )
+          .then((updatedBody) => {
+            return updatedBody.rows[0];
+          });
+      }
+      return updatedVotes.rows[0];
     });
 };

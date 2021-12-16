@@ -74,15 +74,82 @@ describe("PATCH /api/articles/:article_id", () => {
       .send(newVote)
       .expect(200)
       .then((response) => {
-        expect(response.body.updatedArticleInfo).toBeInstanceOf(Object);
-        expect(response.body.updatedArticleInfo.article_id).toBe(articleID);
-        expect(response.body.updatedArticleInfo.votes).toBe(2);
+        expect(response.body.article).toBeInstanceOf(Object);
+        expect(response.body.article.article_id).toBe(articleID);
+        expect(response.body.article.votes).toBe(2);
       });
+  });
+
+  test("inc_votes property can also decrement votes", () => {
+    const articleID = 1;
+    const newVote = { inc_votes: -1 };
+    return request(app)
+      .patch(`/api/articles/${articleID}`)
+      .send(newVote)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.article).toBeInstanceOf(Object);
+        expect(response.body.article.article_id).toBe(articleID);
+        expect(response.body.article.votes).toBe(99);
+      });
+  });
+
+  test("request body accepts an object which updates the body of the specified article", () => {
+    const articleID = 2;
+    const newBody = { body: "Just me and The Laptop" };
+    return request(app)
+      .patch(`/api/articles/${articleID}`)
+      .send(newBody)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.article).toBeInstanceOf(Object);
+        expect(response.body.article.article_id).toBe(articleID);
+        expect(response.body.article.body).toBe(newBody.body);
+        expect(response.body.article.votes).toBe(0);
+      });
+  });
+
+  test("can simultaneously update votes and body of the specified article", () => {
+    const articleID = 2;
+    const newBody = { inc_votes: 2, body: "Just me and The Laptop" };
+    return request(app)
+      .patch(`/api/articles/${articleID}`)
+      .send(newBody)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.article).toBeInstanceOf(Object);
+        expect(response.body.article.article_id).toBe(articleID);
+        expect(response.body.article.body).toBe(newBody.body);
+        expect(response.body.article.votes).toBe(2);
+      });
+  });
+
+  test("no effect to article if request body does not have inc_votes property", () => {
+    const articleID = 2;
+    const newVote = {};
+    return request(app)
+      .patch(`/api/articles/${articleID}`)
+      .send(newVote)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.article).toBeInstanceOf(Object);
+        expect(response.body.article.article_id).toBe(articleID);
+        expect(response.body.article.votes).toBe(0);
+      });
+  });
+
+  test("throws an error if inc_votes is an invalid data type", () => {
+    const articleID = 1;
+    const newVote = { inc_votes: "one" };
+    return request(app)
+      .patch(`/api/articles/${articleID}`)
+      .send(newVote)
+      .expect(400);
   });
 
   test("throws an error if article ID is an invalid data type", () => {
     const articleID = "string";
-    const newVote = { inc_votes: 2 };
+    const newVote = { inc_votes: 1 };
     return request(app)
       .patch(`/api/articles/${articleID}`)
       .send(newVote)
@@ -90,26 +157,12 @@ describe("PATCH /api/articles/:article_id", () => {
   });
 
   test("throws an error if article ID does not exist", () => {
-    const articleID = 899;
-    const newVote = { inc_votes: 2 };
+    const articleID = 889;
+    const newVote = { inc_votes: 1 };
     return request(app)
       .patch(`/api/articles/${articleID}`)
       .send(newVote)
       .expect(404);
-  });
-
-  test("no effect to article if request body does not have inc_votes property", () => {
-    const articleID = 2;
-    const newVote = { votes: 2 };
-    return request(app)
-      .patch(`/api/articles/${articleID}`)
-      .send(newVote)
-      .expect(200)
-      .then((response) => {
-        expect(response.body.updatedArticleInfo).toBeInstanceOf(Object);
-        expect(response.body.updatedArticleInfo.article_id).toBe(articleID);
-        expect(response.body.updatedArticleInfo.votes).toBe(0);
-      });
   });
 });
 
@@ -165,11 +218,11 @@ describe("GET /api/articles", () => {
 
   test("throws an error if sort_by query is for a non-existing column", () => {
     return request(app).get("/api/articles?sort_by=random").expect(400);
-  }); //
+  });
 
   test("accepts order query which can sort articles in ascending order of default sort_by", () => {
     return request(app)
-      .get("/api/articles?order=desc")
+      .get("/api/articles?order=asc")
       .expect(200)
       .then((response) => {
         expect(response.body.articles).toBeInstanceOf(Array);
@@ -193,7 +246,7 @@ describe("GET /api/articles", () => {
 
   test("throws an error if order query is invalid", () => {
     return request(app).get("/api/articles?order=increase").expect(400);
-  }); //
+  });
 
   test("accepts topic query which filters articles of that topic", () => {
     const topic = "mitch";
@@ -213,7 +266,7 @@ describe("GET /api/articles", () => {
     return request(app).get("/api/articles?topic=weather").expect(404);
   });
 
-  test("responds with an empty array if there are no related articles", () => {
+  test("responds with an empty array if there are no related articles of that topic", () => {
     return request(app)
       .get("/api/articles?topic=paper")
       .expect(200)
@@ -245,16 +298,6 @@ describe("GET /api/articles/:article_id/comments", () => {
       });
   });
 
-  test("throws an error if article ID is an invalid data type", () => {
-    const articleID = "string";
-    return request(app).get(`/api/articles/${articleID}/comments`).expect(400);
-  });
-
-  test("throws an error if article ID does not exist", () => {
-    const articleID = 899;
-    return request(app).get(`/api/articles/${articleID}/comments`).expect(404);
-  });
-
   test("responds with an empty array if there are no comments under that article", () => {
     const articleID = 2;
     return request(app)
@@ -263,6 +306,16 @@ describe("GET /api/articles/:article_id/comments", () => {
       .then((response) => {
         expect(response.body.comments).toEqual([]);
       });
+  });
+
+  test("throws an error if article ID is an invalid data type", () => {
+    const articleID = "string";
+    return request(app).get(`/api/articles/${articleID}/comments`).expect(400);
+  });
+
+  test("throws an error if article ID does not exist", () => {
+    const articleID = 889;
+    return request(app).get(`/api/articles/${articleID}/comments`).expect(404);
   });
 });
 
@@ -286,25 +339,7 @@ describe("POST /api/articles/:article_id/comments", () => {
       });
   });
 
-  test("throws an error if article ID is an invalid data type", () => {
-    const articleID = "string";
-    const newComment = { username: "butter_bridge", body: "interesting" };
-    return request(app)
-      .post(`/api/articles/${articleID}/comments`)
-      .send(newComment)
-      .expect(400);
-  });
-
-  test("throws an error if article ID does not exist", () => {
-    const articleID = 899;
-    const newComment = { username: "butter_bridge", body: "interesting" };
-    return request(app)
-      .post(`/api/articles/${articleID}/comments`)
-      .send(newComment)
-      .expect(404);
-  });
-
-  test("throws an error if request body does not have a username property", () => {
+  test("comment not posted if request body does not have a username property", () => {
     const articleID = 2;
     const newComment = { body: "interesting" };
     return request(app)
@@ -313,7 +348,7 @@ describe("POST /api/articles/:article_id/comments", () => {
       .expect(400);
   });
 
-  test("throws an error if request body does not have a body property", () => {
+  test("comment not posted if request body does not have a body property", () => {
     const articleID = 2;
     const newComment = { username: "butter_bridge" };
     return request(app)
@@ -331,7 +366,25 @@ describe("POST /api/articles/:article_id/comments", () => {
     return request(app)
       .post(`/api/articles/${articleID}/comments`)
       .send(newComment)
-      .expect(405);
+      .expect(404);
+  });
+
+  test("throws an error if article ID is an invalid data type", () => {
+    const articleID = "string";
+    const newComment = { username: "butter_bridge", body: "interesting" };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(400);
+  });
+
+  test("throws an error if article ID does not exist", () => {
+    const articleID = 889;
+    const newComment = { username: "butter_bridge", body: "interesting" };
+    return request(app)
+      .post(`/api/articles/${articleID}/comments`)
+      .send(newComment)
+      .expect(404);
   });
 });
 
@@ -397,7 +450,7 @@ describe("GET /api/users", () => {
 });
 
 describe("GET /api/users/:username", () => {
-  test("responds with a user object of given id", () => {
+  test("responds with a user object of given username", () => {
     const username = "icellusedkars";
     return request(app)
       .get(`/api/users/${username}`)
@@ -421,78 +474,191 @@ describe("GET /api/users/:username", () => {
 });
 
 describe("PATCH /api/comments/:comment_id", () => {
-  test("request body accepts an object which updates the specified comment", () => {
+  test("request body accepts an object which updates the votes of the specified comment", () => {
     const commentID = 8;
-    const editedComment = {
+    const patchedComment = {
       username: "icellusedkars",
-      body: "Delicious knekkebrod",
+      inc_votes: 1,
     };
     return request(app)
       .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
+      .send(patchedComment)
       .expect(200)
       .then((response) => {
-        expect(response.body.editedComment).toBeInstanceOf(Object);
-        expect(response.body.editedComment.comment_id).toBe(commentID);
-        expect(response.body.editedComment.body).toEqual(editedComment.body);
+        expect(response.body.comment).toBeInstanceOf(Object);
+        expect(response.body.comment.comment_id).toBe(commentID);
+        expect(response.body.comment.votes).toEqual(1);
       });
   });
 
-  test("throws an error if comment ID is an invalid data type", () => {
-    const commentID = "string";
-    const editedComment = {
+  test("inc_votes property can also decrement votes", () => {
+    const commentID = 3;
+    const patchedComment = {
       username: "icellusedkars",
-      body: "Delicious knekkebrod",
+      inc_votes: -1,
     };
     return request(app)
       .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
-      .expect(400);
+      .send(patchedComment)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.comment).toBeInstanceOf(Object);
+        expect(response.body.comment.comment_id).toBe(commentID);
+        expect(response.body.comment.votes).toEqual(99);
+      });
   });
 
-  test("throws an error if comment ID does not exist", () => {
-    const commentID = 889;
-    const editedComment = {
+  test("request body accepts an object which updates the body of the specified comment", () => {
+    const commentID = 8;
+    const patchedComment = {
       username: "icellusedkars",
       body: "Delicious knekkebrod",
     };
     return request(app)
       .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
-      .expect(404);
+      .send(patchedComment)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.comment).toBeInstanceOf(Object);
+        expect(response.body.comment.comment_id).toBe(commentID);
+        expect(response.body.comment.body).toEqual(patchedComment.body);
+        expect(response.body.comment.votes).toEqual(0);
+      });
+  });
+
+  test("can simultaneously updates votes and body of the specified comment", () => {
+    const commentID = 8;
+    const patchedComment = {
+      username: "icellusedkars",
+      inc_votes: 1,
+      body: "Delicious knekkebrod",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(patchedComment)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.comment).toBeInstanceOf(Object);
+        expect(response.body.comment.comment_id).toBe(commentID);
+        expect(response.body.comment.body).toEqual(patchedComment.body);
+        expect(response.body.comment.votes).toEqual(1);
+      });
+  });
+
+  test("no effect if request body does not have an inc_votes property", () => {
+    const commentID = 8;
+    const patchedComment = {
+      username: "icellusedkars",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(patchedComment)
+      .expect(200);
+  });
+
+  test("throws an error if inc_votes is an invalid data type", () => {
+    const commentID = 8;
+    const patchedComment = {
+      username: "icellusedkars",
+      inc_votes: "one",
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(patchedComment)
+      .expect(400);
   });
 
   test("throws an error if request body does not have a username property", () => {
     const commentID = 8;
-    const editedComment = {
-      body: "Delicious knekkebrod",
+    const patchedComment = {
+      inc_votes: 1,
     };
     return request(app)
       .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
-      .expect(400);
-  });
-
-  test("throws an error if request body does not have a body property", () => {
-    const commentID = 8;
-    const editedComment = {
-      username: "icellusedkars",
-    };
-    return request(app)
-      .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
+      .send(patchedComment)
       .expect(400);
   });
 
   test("throws an error if username does not exist", () => {
     const commentID = 8;
-    const editedComment = {
+    const patchedComment = {
       username: "niharika",
-      body: "Delicious knekkebrod",
+      inc_votes: 1,
     };
     return request(app)
       .patch(`/api/comments/${commentID}`)
-      .send(editedComment)
-      .expect(405);
+      .send(patchedComment)
+      .expect(404);
+  });
+
+  test("throws an error if comment ID is an invalid data type", () => {
+    const commentID = "string";
+    const patchedComment = {
+      username: "icellusedkars",
+      inc_votes: 1,
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(patchedComment)
+      .expect(400);
+  });
+
+  test("throws an error if comment ID is does not exist", () => {
+    const commentID = 889;
+    const patchedComment = {
+      username: "icellusedkars",
+      inc_votes: 1,
+    };
+    return request(app)
+      .patch(`/api/comments/${commentID}`)
+      .send(patchedComment)
+      .expect(404);
+  });
+});
+
+describe("PATCH /api/users/:username", () => {
+  test("request body accepts an object which updates the avatar url of the specified user", () => {
+    const username = "butter_bridge";
+    const newAvatar = {
+      avatar_url:
+        "https://img.pixers.pics/pho_wat(s3:700/FO/74/27/05/25/700_FO74270525_79e4241574a20129637485fd2251509c.jpg,700,700,cms:2018/10/5bd1b6b8d04b8_220x50-watermark.png,over,480,650,jpg)/body-pillows-happy-smiley-face.jpg.jpg",
+    };
+    return request(app)
+      .patch(`/api/users/${username}`)
+      .send(newAvatar)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.user).toBeInstanceOf(Object);
+        expect(response.body.user.username).toBe(username);
+        expect(response.body.user.avatar_url).toBe(newAvatar.avatar_url);
+      });
+  });
+
+  test("sets default avatar url if missing avatar_url property", () => {
+    const username = "butter_bridge";
+    const newAvatar = {};
+    return request(app)
+      .patch(`/api/users/${username}`)
+      .send(newAvatar)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.user).toBeInstanceOf(Object);
+        expect(response.body.user.username).toBe(username);
+        expect(response.body.user.avatar_url).toBe(
+          "https://cdn.pixabay.com/photo/2016/03/31/14/47/avatar-1292817_960_720.png"
+        );
+      });
+  });
+
+  test("throws an error if username does not exist", () => {
+    const username = "niharika";
+    const newAvatar = {
+      avatar_url:
+        "https://img.pixers.pics/pho_wat(s3:700/FO/74/27/05/25/700_FO74270525_79e4241574a20129637485fd2251509c.jpg,700,700,cms:2018/10/5bd1b6b8d04b8_220x50-watermark.png,over,480,650,jpg)/body-pillows-happy-smiley-face.jpg.jpg",
+    };
+    return request(app)
+      .patch(`/api/users/${username}`)
+      .send(newAvatar)
+      .expect(404);
   });
 });

@@ -15,7 +15,7 @@ exports.selectArticleByID = (articleID) => {
     });
 };
 
-exports.updateVotes = (articleID, inc_votes = 0) => {
+exports.updateArticle = (articleID, inc_votes = 0, body) => {
   return db
     .query(
       `UPDATE articles
@@ -24,8 +24,21 @@ exports.updateVotes = (articleID, inc_votes = 0) => {
       RETURNING *;`,
       [inc_votes, articleID]
     )
-    .then((result) => {
-      return result.rows[0];
+    .then((updatedVotes) => {
+      if (body) {
+        return db
+          .query(
+            `UPDATE articles
+            SET body = $1
+            WHERE article_id = $2
+            RETURNING *;`,
+            [body, articleID]
+          )
+          .then((updatedBody) => {
+            return updatedBody.rows[0];
+          });
+      }
+      return updatedVotes.rows[0];
     });
 };
 
@@ -59,6 +72,12 @@ exports.selectCommentsOfArticle = (articleID) => {
 };
 
 exports.addNewComment = (articleID, username, body) => {
+  if (!username || !body) {
+    return Promise.reject({
+      status: 400,
+      msg: "Please structure your request as follows: { username: your_username, body: your comment here}",
+    });
+  }
   return db
     .query(
       `INSERT INTO comments
