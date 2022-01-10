@@ -1,6 +1,6 @@
 ### LINK TO HOSTED VERSION
 
-https://git.heroku.com/ncnews.git
+https://ncnews.herokuapp.com/api
 
 # SUMMARY
 

@@ -109,21 +109,6 @@ describe("PATCH /api/articles/:article_id", () => {
       });
   });
 
-  test("can simultaneously update votes and body of the specified article", () => {
-    const articleID = 2;
-    const newBody = { inc_votes: 2, body: "Just me and The Laptop" };
-    return request(app)
-      .patch(`/api/articles/${articleID}`)
-      .send(newBody)
-      .expect(200)
-      .then((response) => {
-        expect(response.body.article).toBeInstanceOf(Object);
-        expect(response.body.article.article_id).toBe(articleID);
-        expect(response.body.article.body).toBe(newBody.body);
-        expect(response.body.article.votes).toBe(2);
-      });
-  });
-
   test("no effect to article if request body does not have inc_votes property", () => {
     const articleID = 2;
     const newVote = {};
@@ -540,25 +525,6 @@ describe("PATCH /api/comments/:comment_id", () => {
         expect(response.body.comment.comment_id).toBe(commentID);
         expect(response.body.comment.body).toEqual(patchedComment.body);
         expect(response.body.comment.votes).toEqual(0);
-      });
-  });
-
-  test("can simultaneously updates votes and body of the specified comment", () => {
-    const commentID = 8;
-    const patchedComment = {
-      username: "icellusedkars",
-      inc_votes: 1,
-      body: "Delicious knekkebrod",
-    };
-    return request(app)
-      .patch(`/api/comments/${commentID}`)
-      .send(patchedComment)
-      .expect(200)
-      .then((response) => {
-        expect(response.body.comment).toBeInstanceOf(Object);
-        expect(response.body.comment.comment_id).toBe(commentID);
-        expect(response.body.comment.body).toEqual(patchedComment.body);
-        expect(response.body.comment.votes).toEqual(1);
       });
   });
 

@@ -4,7 +4,6 @@ const {
   selectArticles,
   selectCommentsOfArticle,
   addNewComment,
-  selectRecentArticles,
 } = require("../models/articles");
 const { checkExists, checkValid } = require("../models/utils");
 
