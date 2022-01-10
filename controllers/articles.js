@@ -4,6 +4,7 @@ const {
   selectArticles,
   selectCommentsOfArticle,
   addNewComment,
+  selectRecentArticles,
 } = require("../models/articles");
 const { checkExists, checkValid } = require("../models/utils");
 
@@ -43,17 +44,20 @@ exports.patchArticle = (req, res, next) => {
 };
 
 exports.getArticles = (req, res, next) => {
-  const { sort_by, order, topic } = req.query;
+  const { sort_by, order, topic, title } = req.query;
   Promise.all([
     checkExists("topics", "slug", topic),
-    selectArticles(sort_by, order, topic),
+    checkExists("articles", "title", title),
+    selectArticles(sort_by, order, topic, title),
   ])
     .then((articles) => {
+      console.log(articles);
       res.status(200).send({
-        articles: articles[1],
+        articles: articles[2],
       });
     })
     .catch((err) => {
+      console.log(err);
       next(err);
     });
 };

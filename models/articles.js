@@ -42,7 +42,12 @@ exports.updateArticle = (articleID, inc_votes = 0, body) => {
     });
 };
 
-exports.selectArticles = (sort_by = "created_at", order = "desc", topic) => {
+exports.selectArticles = (
+  sort_by = "created_at",
+  order = "desc",
+  topic,
+  title
+) => {
   let query = `SELECT articles.*, COUNT(comments.article_id) AS comment_count
   FROM articles
   LEFT JOIN comments ON comments.article_id = articles.article_id `;
@@ -53,6 +58,9 @@ exports.selectArticles = (sort_by = "created_at", order = "desc", topic) => {
 
   if (topic) {
     byTopic = `WHERE articles.topic = '${topic}' `;
+    query = query + byTopic;
+  } else if (title) {
+    byTopic = `WHERE articles.title = '${title}'`;
     query = query + byTopic;
   }
 

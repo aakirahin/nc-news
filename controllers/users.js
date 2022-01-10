@@ -2,8 +2,9 @@ const {
   selectUsers,
   selectUserByUsername,
   editAvatar,
+  addNewUser,
 } = require("../models/users");
-const { checkExists } = require("../models/utils");
+const { checkExists, checkUnique } = require("../models/utils");
 
 exports.getUsers = (req, res, next) => {
   selectUsers()
@@ -40,6 +41,21 @@ exports.patchAvatarURL = (req, res, next) => {
       res.status(200).send({ user: user[1] });
     })
     .catch((err) => {
+      next(err);
+    });
+};
+
+exports.postNewUser = (req, res, next) => {
+  const { username, name, avatar_url } = req.body;
+  Promise.all([
+    checkUnique("users", "username", username),
+    addNewUser(username, name, avatar_url),
+  ])
+    .then((user) => {
+      res.status(201).send({ msg: "User has been created", user: user[1] });
+    })
+    .catch((err) => {
+      console.log(err);
       next(err);
     });
 };

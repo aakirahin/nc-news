@@ -275,6 +275,23 @@ describe("GET /api/articles", () => {
         expect(response.body.articles.length).toBe(0);
       });
   });
+
+  test("accepts title query to find a specific article", () => {
+    const title = "A";
+    return request(app)
+      .get(`/api/articles?title=${title}`)
+      .expect(200)
+      .then((response) => {
+        expect(response.body.articles).toBeInstanceOf(Array);
+        response.body.articles.forEach((article) => {
+          expect(article.title).toEqual(title);
+        });
+      });
+  });
+
+  test("throws an error if title does not exist", () => {
+    return request(app).get("/api/articles?title=B").expect(404);
+  });
 });
 
 describe("GET /api/articles/:article_id/comments", () => {
@@ -660,5 +677,75 @@ describe("PATCH /api/users/:username", () => {
       .patch(`/api/users/${username}`)
       .send(newAvatar)
       .expect(404);
+  });
+});
+
+describe("POST /api/users", () => {
+  test("request body accepts an object to post a new user", () => {
+    const newUser = {
+      username: "niharika",
+      name: "Niharika",
+      avatar_url:
+        "https://upload.wikimedia.org/wikipedia/commons/7/74/Beijing_bouddhist_monk_2009_IMG_1486.JPG",
+    };
+    return request(app)
+      .post(`/api/users`)
+      .send(newUser)
+      .expect(201)
+      .then((response) => {
+        expect(response.body.user).toBeInstanceOf(Object);
+        expect(response.body.user).toMatchObject({
+          username: newUser.username,
+          name: newUser.name,
+          avatar_url: newUser.avatar_url,
+        });
+      });
+  });
+
+  test("default avatar url is set if request body is missing avatar_url property", () => {
+    const newUser = {
+      username: "sunwar",
+      name: "Sunwar",
+    };
+    return request(app)
+      .post(`/api/users`)
+      .send(newUser)
+      .expect(201)
+      .then((response) => {
+        expect(response.body.user).toBeInstanceOf(Object);
+        expect(response.body.user).toMatchObject({
+          username: newUser.username,
+          name: newUser.name,
+          avatar_url:
+            "https://cdn.pixabay.com/photo/2016/03/31/14/47/avatar-1292817_960_720.png",
+        });
+      });
+  });
+
+  test("throws an error if request body is missing username property", () => {
+    const newUser = {
+      name: "Jessica",
+      avatar_url:
+        "https://upload.wikimedia.org/wikipedia/commons/7/74/Beijing_bouddhist_monk_2009_IMG_1486.JPG",
+    };
+    return request(app).post(`/api/users`).send(newUser).expect(400);
+  });
+
+  test("throws an error if request body is missing name property", () => {
+    const newUser = {
+      username: "jessica",
+      avatar_url:
+        "https://upload.wikimedia.org/wikipedia/commons/7/74/Beijing_bouddhist_monk_2009_IMG_1486.JPG",
+    };
+    return request(app).post(`/api/users`).send(newUser).expect(400);
+  });
+
+  test("throws an error if username already exists", () => {
+    const newUser = {
+      username: "rogersop",
+      name: "Paul",
+      avatar_url: "https://avatars2.githubusercontent.com/u/24394918?s=400&v=4",
+    };
+    return request(app).post(`/api/users`).send(newUser).expect(422);
   });
 });

@@ -27,3 +27,19 @@ exports.checkValid = (id) => {
     });
   }
 };
+
+exports.checkUnique = (table, column, value) => {
+  if (!value) {
+    return "Nothing to check";
+  }
+  const queryStr = format(`SELECT * FROM %I WHERE %I = $1;`, table, column);
+  return db.query(queryStr, [value]).then((result) => {
+    if (result.rows.length > 0) {
+      return Promise.reject({
+        status: 422,
+        msg: "Value is not unique",
+      });
+    }
+    return value;
+  });
+};

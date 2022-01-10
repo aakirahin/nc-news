@@ -5,6 +5,7 @@ const {
   getArticles,
   getCommentsOfArticle,
   postNewComment,
+  getRecentArticles,
 } = require("../controllers/articles");
 
 const articlesRouter = express.Router();
