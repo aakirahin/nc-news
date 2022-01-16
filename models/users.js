@@ -36,6 +36,13 @@ exports.addNewUser = (
   name,
   url = "https://cdn.pixabay.com/photo/2016/03/31/14/47/avatar-1292817_960_720.png"
 ) => {
+  if (!username || !name) {
+    return Promise.reject({
+      status: 400,
+      msg: "Please make sure you have entered a username and a name.",
+    });
+  }
+
   return db
     .query(
       `INSERT INTO users

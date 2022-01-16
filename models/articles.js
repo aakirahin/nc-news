@@ -56,6 +56,18 @@ exports.selectArticles = (
   let sortBy = `ORDER BY articles.${sort_by} `;
   let orderBy = `${order.toUpperCase()};`;
 
+  if (!["votes", "created_at", "article_id"].includes(sort_by)) {
+    return Promise.reject({
+      status: 400,
+      msg: "Cannot sort by that category. Please try the following: 'votes', 'created_at', 'article_id'.",
+    });
+  } else if (!["ASC", "DESC"].includes(order.toUpperCase())) {
+    return Promise.reject({
+      status: 400,
+      msg: "Order should be either 'asc' or 'desc'.",
+    });
+  }
+
   if (topic) {
     byTopic = `WHERE articles.topic = '${topic}' `;
     query = query + byTopic;

@@ -50,13 +50,11 @@ exports.getArticles = (req, res, next) => {
     selectArticles(sort_by, order, topic, title),
   ])
     .then((articles) => {
-      console.log(articles);
       res.status(200).send({
         articles: articles[2],
       });
     })
     .catch((err) => {
-      console.log(err);
       next(err);
     });
 };

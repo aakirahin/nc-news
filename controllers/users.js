@@ -55,7 +55,6 @@ exports.postNewUser = (req, res, next) => {
       res.status(201).send({ msg: "User has been created", user: user[1] });
     })
     .catch((err) => {
-      console.log(err);
       next(err);
     });
 };
