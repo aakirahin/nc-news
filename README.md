@@ -6,6 +6,9 @@ https://ncnews.herokuapp.com/api
 
 In this backend project, the aim was to create an Express server with RESTful API endpoints that interact with a PSQL database. `node-postgres` was used to connect to the database so the application data could be queried and dealt with in the models. The controllers, on the other hand, focussed on error handling the client's request. Each endpoint was tested using supertest. Routers were also organised to access these endpoints.
 
+> Node.js: v17.1.0
+> Postgres: 12.9
+
 # INSTRUCTIONS
 
 ## Step 1 - Cloning this repo
@@ -64,6 +67,3 @@ Create an `app.test.js` file, where you will test your endpoints using `supertes
 - `seed.js` (so `beforeEach()` test, your test data can be seeded; and `afterAll()` tests, you can end connection to the database)
 - `connection.js`
 - **optional** `jest-sorted` (which you will first have to install) if you're testing for sorted data
-
-> Node.js: v17.1.0
-> Postgres: 12.9
